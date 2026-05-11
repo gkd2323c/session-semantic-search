@@ -42,9 +42,9 @@ export const parameters = {
     },
     format: {
       type: "string",
-      enum: ["text", "json"],
-      description: "输出格式: text=人类可读报告（默认）, json=结构化数据",
-      default: "text",
+      enum: ["json", "text"],
+      description: "输出格式: json=结构化数据（默认，AI 解析用）, text=人类可读报告",
+      default: "json",
     },
   },
   required: ["action"],
@@ -202,7 +202,8 @@ export async function execute(input, toolCtx) {
         log,
       });
 
-      if (input.format === "json") {
+      // 默认输出 JSON（AI 解析用），传递 format=text 获取人类可读报告
+      if ((input.format || "json") === "json") {
         return JSON.stringify(formatResultsJson(results), null, 2);
       }
 
