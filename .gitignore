@@ -1,5 +1,8 @@
 node_modules/
 *.log
 .DS_Store
+memory/
+package-lock.json
 vector_store.db
 *.db-journal
+index.json
