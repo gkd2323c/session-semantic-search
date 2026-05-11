@@ -1,0 +1,57 @@
+{
+  "id": "session-semantic-search",
+  "name": "Session Semantic Search",
+  "version": "0.1.0",
+  "description": "向量化对话历史，支持概念级语义检索。用嵌入模型索引所有 session 对话，通过语义相似度匹配找到相关对话片段，展示上下文预览。",
+  "author": "Hanako",
+  "trust": "full-access",
+  "minAppVersion": "0.82.0",
+  "activationEvents": ["onStartup"],
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "embeddingEndpoint": {
+          "type": "string",
+          "default": "http://localhost:11434/api/embed",
+          "description": "嵌入模型 API 端点（兼容 Ollama / OpenAI 格式）"
+        },
+        "embeddingModel": {
+          "type": "string",
+          "default": "qwen3-embedding:0.6b",
+          "description": "嵌入模型名称"
+        },
+        "chunkSize": {
+          "type": "number",
+          "default": 10,
+          "description": "每个对话片段包含的最大交换轮数"
+        },
+        "chunkOverlap": {
+          "type": "number",
+          "default": 2,
+          "description": "相邻片段之间的重叠轮数，保证上下文连续性"
+        },
+        "maxResults": {
+          "type": "number",
+          "default": 10,
+          "description": "搜索返回的最大结果数"
+        },
+        "minSimilarity": {
+          "type": "number",
+          "default": 0.5,
+          "description": "最小相似度阈值（0-1），低于此值的结果不返回"
+        },
+        "autoIndex": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否在启动时自动索引新会话"
+        },
+        "indexIntervalMinutes": {
+          "type": "number",
+          "default": 30,
+          "description": "增量索引间隔（分钟）"
+        }
+      }
+    }
+  }
+}
