@@ -15,6 +15,7 @@ import { Embedder } from "../lib/embedder.js";
 import { VectorStore } from "../lib/store.js";
 import { SessionIndexer } from "../lib/indexer.js";
 import { search, formatResults, formatResultsJson } from "../lib/search.js";
+import { sharedState } from "../lib/shared-state.js";
 
 export const name = "search";
 export const description = `语义搜索对话历史。使用嵌入模型将查询向量化，与已索引的对话片段做相似度匹配。支持自然语言描述（不需要关键词）。返回带上下文预览的匹配结果。`;
@@ -63,9 +64,15 @@ export async function execute(input, toolCtx) {
   const chunkSize = config?.get?.("chunkSize") || 10;
   const chunkOverlap = config?.get?.("chunkOverlap") || 2;
 
-  const embedder = new Embedder({ endpoint, model, log });
-  const store = new VectorStore(storePath, log);
-  await store.load();
+  // 优先复用插件生命周期中的共享实例，避免重复加载 100MB+ 索引文件
+  // 降级：插件未就绪时各自创建独立实例
+  const embedder = sharedState.ready && sharedState.embedder
+    ? sharedState.embedder
+    : new Embedder({ endpoint, model, log });
+
+  const store = sharedState.ready && sharedState.store
+    ? sharedState.store
+    : await (async () => { const s = new VectorStore(storePath, log); await s.load(); return s; })();
 
   switch (input.action) {
     // ── health: 检查嵌入服务状态 ─────────────────────────────────

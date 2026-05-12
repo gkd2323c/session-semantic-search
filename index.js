@@ -10,6 +10,7 @@
  * 4. 暴露状态查询能力
  */
 import path from "node:path";
+import { sharedState } from "./lib/shared-state.js";
 
 export default class SessionSemanticSearchPlugin {
   #log = null;
@@ -49,6 +50,10 @@ export default class SessionSemanticSearchPlugin {
     this.#embedder = new Embedder({ endpoint, model, log: this.#log });
     this.#store = new VectorStore(storePath, this.#log);
     await this.#store.load();
+
+    // 将实例写入共享状态，供搜索工具复用
+    sharedState.embedder = this.#embedder;
+    sharedState.store = this.#store;
 
     this.#indexer = new SessionIndexer({
       sessionsDir,
@@ -117,6 +122,9 @@ export default class SessionSemanticSearchPlugin {
       this.#scanTimer = null;
     }
 
+    // 清空共享状态
+    sharedState.reset();
+
     // 保存向量索引
     if (this.#store) {
       await this.#store.flush();
@@ -161,6 +169,7 @@ export default class SessionSemanticSearchPlugin {
     }
 
     this.#initDone = true;
+    sharedState.ready = true;
   }
 
   /**
