@@ -22,6 +22,8 @@ export default class SessionSemanticSearchPlugin {
   #initPromise = null;
   #initDone = false;
   #scanTimer = null;
+  #instantIndexTimer = null;
+  #unsubSessionStatus = null;
 
   async onload() {
     this.#log = this.ctx.log;
@@ -69,6 +71,39 @@ export default class SessionSemanticSearchPlugin {
     this.#initPromise.catch((err) => {
       this.#log.warn(`initialization failed: ${err.message}`);
     });
+
+    // 即时索引：监听 session 轮次结束事件，对话停顿时主动索引当前会话
+    // 3 秒防抖：如果用户连续发送消息，只在最后一次结束后触发
+    const debounceMs = Math.max(1000, Math.min(10000, this.#config?.get?.("instantIndexDebounceMs") || 3000));
+
+    this.#unsubSessionStatus = this.#bus.subscribe(
+      (event, sessionPath) => {
+        if (event.type !== "session_status") return;
+
+        if (event.isStreaming === false && sessionPath) {
+          // 轮次结束：启动防抖定时器，对话稳定后触发索引
+          if (this.#instantIndexTimer) clearTimeout(this.#instantIndexTimer);
+          this.#instantIndexTimer = setTimeout(async () => {
+            this.#instantIndexTimer = null;
+            try {
+              const sessionId = path.basename(sessionPath, ".jsonl");
+              const result = await this.#indexer.indexFile(sessionId);
+              this.#log.info(`instant index: ${sessionId} → ${result.chunks} chunks`);
+            } catch (err) {
+              this.#log.warn(`instant index skipped: ${err.message}`);
+            }
+          }, debounceMs);
+        } else if (event.isStreaming === true) {
+          // 新一轮开始：取消待执行的索引（用户还在继续聊）
+          if (this.#instantIndexTimer) {
+            clearTimeout(this.#instantIndexTimer);
+            this.#instantIndexTimer = null;
+          }
+        }
+      },
+      { types: ["session_status"] }
+    );
+    this.register(this.#unsubSessionStatus);
 
     // 定时增量扫描
     if (autoIndex && indexInterval > 0) {
@@ -120,6 +155,12 @@ export default class SessionSemanticSearchPlugin {
     if (this.#scanTimer) {
       clearInterval(this.#scanTimer);
       this.#scanTimer = null;
+    }
+
+    // 取消防抖定时器
+    if (this.#instantIndexTimer) {
+      clearTimeout(this.#instantIndexTimer);
+      this.#instantIndexTimer = null;
     }
 
     // 清空共享状态
