@@ -43,7 +43,7 @@ export default class SessionSemanticSearchPlugin {
 
     const endpoint =
       this.#config?.get?.("embeddingEndpoint") || "http://localhost:11434/api/embed";
-    const model = this.#config?.get?.("embeddingModel") || "nomic-embed-text";
+    const model = this.#config?.get?.("embeddingModel") || "qwen3-embedding:0.6b";
     const chunkSize = this.#config?.get?.("chunkSize") || 10;
     const chunkOverlap = this.#config?.get?.("chunkOverlap") || 2;
     const autoIndex = this.#config?.get?.("autoIndex") !== false;

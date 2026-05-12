@@ -58,7 +58,7 @@ export async function execute(input, toolCtx) {
   const sessionsDir = path.resolve(dataDir, "..", "..", "agents", "hanako", "sessions");
 
   const endpoint = config?.get?.("embeddingEndpoint") || "http://localhost:11434/api/embed";
-  const model = config?.get?.("embeddingModel") || "nomic-embed-text";
+  const model = config?.get?.("embeddingModel") || "qwen3-embedding:0.6b";
   const defaultMaxResults = config?.get?.("maxResults") || 10;
   const defaultMinSimilarity = config?.get?.("minSimilarity") || 0.5;
   const chunkSize = config?.get?.("chunkSize") || 10;
