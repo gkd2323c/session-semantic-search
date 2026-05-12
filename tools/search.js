@@ -24,8 +24,8 @@ export const parameters = {
   properties: {
     action: {
       type: "string",
-      enum: ["search", "stats", "reindex", "health"],
-      description: "操作类型: search=搜索, stats=查看索引统计, reindex=重新索引所有会话, health=检查嵌入服务状态",
+      enum: ["search", "stats", "reindex", "health", "migrate"],
+      description: "操作类型: search=搜索, stats=查看索引统计, reindex=重新索引所有会话, health=检查嵌入服务状态, migrate=迁移旧格式嵌入向量至 base64",
     },
     query: {
       type: "string",
@@ -217,15 +217,39 @@ export async function execute(input, toolCtx) {
       return formatResults(results);
     }
 
+    // ── migrate: 迁移旧格式嵌入向量至 base64 ──────────────────────
+    case "migrate": {
+      const health = await embedder.healthCheck();
+      const result = await store.migrate();
+
+      if (result.migrated === 0) {
+        return [
+          `📦 嵌入向量格式迁移`,
+          `  无需迁移，所有 ${result.total} 条条目已是 base64 格式`,
+          `  存储格式版本: ${store.getInfo().formatVersion}`,
+        ].join("\n");
+      }
+
+      return [
+        `📦 嵌入向量格式迁移完成`,
+        `  迁移条目: ${result.migrated} / ${result.total}`,
+        `  迁移前大小: ${result.sizeBefore}`,
+        `  迁移后大小: ${result.sizeAfter}`,
+        `  存储格式版本: 2`,
+        `  嵌入服务: ${health.ok ? "✅ 在线" : "⚠️ 离线（迁移不受影响）"}`,
+      ].join("\n");
+    }
+
     default:
       return [
         `未知 action: "${input.action}"`,
-        `可用操作: search / stats / reindex / health`,
+        `可用操作: search / stats / reindex / health / migrate`,
         ``,
         `示例：`,
         `  search action=health             检查服务状态`,
         `  search action=stats              查看索引统计`,
         `  search action=reindex            全量重新索引`,
+        `  search action=migrate            迁移向量格式至 base64`,
         `  search action=search query="xxx" 语义搜索`,
       ].join("\n");
   }
