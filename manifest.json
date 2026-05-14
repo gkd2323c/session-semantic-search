@@ -50,6 +50,16 @@
           "type": "number",
           "default": 30,
           "description": "增量索引间隔（分钟）"
+        },
+        "vaultEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否启用 Markdown 双写镜像（将索引的对话片段同时写入 .md 文件）"
+        },
+        "vaultDir": {
+          "type": "string",
+          "default": null,
+          "description": "Markdown vault 目录（默认 plugins/session-semantic-search/memory/vault/）"
         }
       }
     }

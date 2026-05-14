@@ -18,6 +18,7 @@ export default class SessionSemanticSearchPlugin {
   #embedder = null;
   #store = null;
   #indexer = null;
+  #mirror = null;
   #config = null;
   #initPromise = null;
   #initDone = false;
@@ -40,6 +41,7 @@ export default class SessionSemanticSearchPlugin {
     const { Embedder } = await import("./lib/embedder.js");
     const { VectorStore } = await import("./lib/store.js");
     const { SessionIndexer } = await import("./lib/indexer.js");
+    const { MarkdownMirror } = await import("./lib/markdown-mirror.js");
 
     const endpoint =
       this.#config?.get?.("embeddingEndpoint") || "http://localhost:11434/api/embed";
@@ -49,8 +51,18 @@ export default class SessionSemanticSearchPlugin {
     const autoIndex = this.#config?.get?.("autoIndex") !== false;
     const indexInterval = (this.#config?.get?.("indexIntervalMinutes") || 30) * 60 * 1000;
 
+    // 初始化 Markdown 镜像输出
+    const vaultEnabled = this.#config?.get?.("vaultEnabled") !== false;
+    const vaultDir = this.#config?.get?.("vaultDir") || path.join(dataDir, "vault");
+    this.#mirror = new MarkdownMirror({
+      vaultDir,
+      enabled: vaultEnabled,
+      log: this.#log,
+    });
+
     this.#embedder = new Embedder({ endpoint, model, log: this.#log });
     this.#store = new VectorStore(storePath, this.#log);
+    this.#store.setMirror(this.#mirror);
     await this.#store.load();
 
     // 将实例写入共享状态，供搜索工具复用
@@ -169,6 +181,11 @@ export default class SessionSemanticSearchPlugin {
     // 保存向量索引
     if (this.#store) {
       await this.#store.flush();
+    }
+
+    // 刷新 Markdown 镜像待处理写入
+    if (this.#mirror) {
+      await this.#mirror.flush();
     }
 
     this.#log.info("🔍 Session Semantic Search unloaded");
